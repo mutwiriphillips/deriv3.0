@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Trade Advisor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0E1420;
+    --surface: #161D2E;
+    --surface-2: #1D2740;
+    --line: #2A3550;
+    --text: #EDEAE0;
+    --text-dim: #9AA4BC;
+    --gold: #C9A227;
+    --up: #3FB68B;
+    --down: #D96C6C;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    line-height: 1.5;
+  }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .tagline { color: var(--text-dim); font-size: 0.9rem; }
+
+  .controls {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 32px;
+  }
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 14px;
+  }
+  .field label {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--ink);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 9px 10px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+  .field input:focus, .field select:focus {
+    outline: 2px solid var(--gold);
+    outline-offset: 1px;
+  }
+  button.primary {
+    margin-top: 18px;
+    background: var(--gold);
+    color: #221a05;
+    border: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 12px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    transition: filter 0.15s;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.primary:disabled { opacity: 0.5; cursor: wait; }
+
+  #result { display: none; }
+
+  .hero {
+    text-align: center;
+    padding: 40px 20px;
+    border-radius: 12px;
+    margin-bottom: 28px;
+    border: 1px solid var(--line);
+  }
+  .hero.trade { background: linear-gradient(180deg, rgba(63,182,139,0.08), transparent); }
+  .hero.no-trade { background: var(--surface); }
+  .hero .verb {
+    font-family: 'Fraunces', serif;
+    font-size: 2.2rem;
+    font-weight: 600;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  .hero.trade .verb.CALL { color: var(--up); }
+  .hero.trade .verb.PUT { color: var(--down); }
+  .hero.no-trade .verb { color: var(--text-dim); }
+  .hero .sub { color: var(--text-dim); font-size: 0.95rem; }
+  .hero .reasoning {
+    margin-top: 18px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-align: left;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .hero .reasoning li { margin-bottom: 4px; }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+  .metric {
+    background: var(--surface);
+    padding: 16px;
+  }
+  .metric .label { font-size: 0.72rem; color: var(--text-dim); margin-bottom: 4px; }
+  .metric .value { font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  th, td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+  }
+  th { color: var(--text-dim); font-weight: 500; font-size: 0.75rem; }
+  td.num { font-family: 'IBM Plex Mono', monospace; }
+  tr.qualifies td:first-child { border-left: 3px solid var(--up); }
+  tr.disqualifies td:first-child { border-left: 3px solid transparent; }
+  .status-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-size: 0.72rem;
+  }
+  .status-pill.yes { background: rgba(63,182,139,0.15); color: var(--up); }
+  .status-pill.no { background: rgba(154,164,188,0.15); color: var(--text-dim); }
+
+  .error-box {
+    background: rgba(217,108,108,0.1);
+    border: 1px solid rgba(217,108,108,0.3);
+    color: var(--down);
+    padding: 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 0.78rem;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Trade Advisor</h1>
+    <div class="tagline">Live recommendation, not an order</div>
+  </header>
+
+  <div class="controls">
+    <div class="controls-grid">
+      <div class="field">
+        <label for="symbol">Symbol</label>
+        <input id="symbol" value="frxEURUSD" />
+      </div>
+      <div class="field">
+        <label for="strategy">Strategy</label>
+        <select id="strategy">
+          <option value="simple_trend">Simple trend</option>
+          <option value="simple_momentum">Simple momentum</option>
+          <option value="random">Random (baseline)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="durations">Durations to check (s)</label>
+        <input id="durations" value="30,60,120,300" />
+      </div>
+      <div class="field">
+        <label for="balance">Account balance (optional)</label>
+        <input id="balance" placeholder="e.g. 1000" type="number" />
+      </div>
+    </div>
+    <button class="primary" id="getAdvice">Get advice</button>
+  </div>
+
+  <div id="loading" style="display:none; color:var(--text-dim); text-align:center; padding: 20px;">Checking current market and live payouts…</div>
+  <div id="errorBox" class="error-box" style="display:none;"></div>
+
+  <div id="result">
+    <div class="hero" id="hero">
+      <div class="verb" id="heroVerb"></div>
+      <div class="sub" id="heroSub"></div>
+      <ul class="reasoning" id="heroReasoning"></ul>
+    </div>
+
+    <div class="metrics" id="metrics"></div>
+
+    <table id="durationTable">
+      <thead>
+        <tr><th>Duration</th><th>Payout</th><th>Break-even</th><th>Edge</th><th>EV</th><th>Status</th></tr>
+      </thead>
+      <tbody id="durationBody"></tbody>
+    </table>
+  </div>
+
+  <footer>
+    This tool surfaces a statistical recommendation from historical and live market data.
+    It is not financial advice and does not guarantee any outcome. Trading involves risk of loss.
+    Demo account only unless you have deliberately configured live trading.
+  </footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+$('getAdvice').addEventListener('click', async () => {
+  const symbol = $('symbol').value.trim();
+  const strategy = $('strategy').value;
+  const durations = $('durations').value.trim();
+  const balance = $('balance').value;
+
+  const params = new URLSearchParams({ symbol, strategy, durations });
+  if (balance) params.set('account_balance', balance);
+
+  $('result').style.display = 'none';
+  $('errorBox').style.display = 'none';
+  $('loading').style.display = 'block';
+  $('getAdvice').disabled = true;
+
+  try {
+    const res = await fetch(`/trade-advice?${params.toString()}`);
+    const data = await res.json();
+    $('loading').style.display = 'none';
+    $('getAdvice').disabled = false;
+
+    if (data.error) {
+      $('errorBox').textContent = data.error;
+      $('errorBox').style.display = 'block';
+      return;
+    }
+    renderAdvice(data);
+  } catch (e) {
+    $('loading').style.display = 'none';
+    $('getAdvice').disabled = false;
+    $('errorBox').textContent = 'Request failed: ' + e;
+    $('errorBox').style.display = 'block';
+  }
+});
+
+function fmtPct(x) { return x === null || x === undefined ? '—' : (x * 100).toFixed(2) + '%'; }
+function fmtNum(x, d=4) { return x === null || x === undefined ? '—' : Number(x).toFixed(d); }
+
+function renderAdvice(data) {
+  const hero = $('hero');
+  const verb = $('heroVerb');
+  const sub = $('heroSub');
+  const reasoning = $('heroReasoning');
+  reasoning.innerHTML = '';
+
+  if (data.action === 'TRADE') {
+    hero.className = 'hero trade';
+    verb.className = 'verb ' + data.direction;
+    verb.textContent = `${data.direction} · ${data.symbol}`;
+    sub.textContent = `${data.recommended_duration_s}s duration · regime ${data.regime}`;
+  } else {
+    hero.className = 'hero no-trade';
+    verb.className = 'verb';
+    verb.textContent = 'No trade right now';
+    sub.textContent = data.direction
+      ? `${data.direction} signal identified on ${data.symbol}, but no duration currently clears the edge/EV bar`
+      : `No directional signal on ${data.symbol} (regime ${data.regime})`;
+  }
+  (data.reasoning || []).forEach(r => {
+    const li = document.createElement('li');
+    li.textContent = r;
+    reasoning.appendChild(li);
+  });
+
+  const metrics = $('metrics');
+  metrics.innerHTML = '';
+  const rows = [
+    ['Probability', fmtPct(data.model_probability)],
+    ['Confidence', fmtPct(data.confidence)],
+    ['Edge', data.probability_edge !== null && data.probability_edge !== undefined ? (data.probability_edge >= 0 ? '+' : '') + fmtPct(data.probability_edge) : '—'],
+    ['Expected value', fmtNum(data.expected_value, 3)],
+    ['Payout ratio', data.recommended_payout_ratio ? (data.recommended_payout_ratio * 100).toFixed(1) + '%' : '—'],
+    ['Suggested stake', data.suggested_stake ? data.suggested_stake.toFixed(2) : '—'],
+  ];
+  rows.forEach(([label, value]) => {
+    const div = document.createElement('div');
+    div.className = 'metric';
+    div.innerHTML = `<div class="label">${label}</div><div class="value">${value}</div>`;
+    metrics.appendChild(div);
+  });
+
+  const tbody = $('durationBody');
+  tbody.innerHTML = '';
+  (data.duration_candidates || []).forEach(d => {
+    const tr = document.createElement('tr');
+    tr.className = d.qualifies ? 'qualifies' : 'disqualifies';
+    tr.innerHTML = `
+      <td>${d.duration_s}s</td>
+      <td class="num">${d.payout_ratio !== null ? (d.payout_ratio*100).toFixed(1) + '%' : '—'}</td>
+      <td class="num">${fmtPct(d.break_even_probability)}</td>
+      <td class="num">${d.probability_edge !== null && d.probability_edge !== undefined ? fmtPct(d.probability_edge) : '—'}</td>
+      <td class="num">${fmtNum(d.expected_value, 3)}</td>
+      <td>${d.qualifies ? '<span class="status-pill yes">qualifies</span>' : `<span class="status-pill no" title="${d.reason || ''}">no — ${d.reason || 'n/a'}</span>`}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  $('result').style.display = 'block';
+}
+</script>
+</body>
+</html>
