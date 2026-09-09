@@ -1,0 +1,92 @@
+# Render Blueprint for the Deriv trading bot.
+#
+# This runs as a WEB service, not a worker — scripts/run_forward_test.py now
+# serves a minimal read-only HTTP surface (/health, /status) via uvicorn,
+# running concurrently with the trading loop in the same process. Render
+# only routes external traffic to `web` services, so that's what this needs
+# to be for /status to actually be reachable. The script reads Render's
+# PORT env var automatically (uvicorn binds to it).
+#
+# Deploy: push this repo to a Git provider Render can see, then in the
+# Render dashboard choose "New +" -> "Blueprint" and point it at this repo.
+# Render will read this file and provision the service automatically.
+#
+# IMPORTANT — persistent disk caveat:
+# Render's default filesystem is ephemeral: it resets on every deploy and
+# every restart. The `disk` block below attaches a persistent volume so
+# forward_test.db survives restarts — and now that RiskGovernor/SessionStats
+# state is persisted into that same file after every tick
+# (monitoring/state_persistence.py), a restart resumes today's P/L and loss
+# streak instead of forgetting it. Render Disks still require a paid
+# instance type (not the free tier) — check current Render pricing before
+# relying on this. Without a disk, both the candle history AND the daily
+# risk/session state are lost on every restart, back to the original gap.
+
+services:
+  - type: web
+    name: deriv-trading-bot
+    runtime: python
+    plan: starter   # Render's disk feature needs a paid plan; adjust to whatever tier you're on
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/run_forward_test.py
+    healthCheckPath: /health
+    disk:
+      name: deriv-bot-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
+    envVars:
+      # --- secrets: set these in the Render dashboard, never commit them ---
+      - key: DERIV_API_TOKEN
+        sync: false
+      - key: DERIV_APP_ID
+        sync: false
+      - key: CONTROL_API_KEY
+        sync: false   # set this to enable /control/* endpoints; leave unset to keep control disabled entirely
+
+      # --- mode / safety gates: DEMO-only, matches scripts/run_forward_test.py's own hard refusal to run live ---
+      - key: MODE
+        value: DEMO
+      - key: LIVE_TRADING
+        value: "false"
+      - key: LIVE_CONFIRMATION
+        value: "false"
+
+      # --- storage: point at the persistent disk mounted above ---
+      - key: DB_PATH
+        value: /opt/render/project/src/data/forward_test.db
+
+      # --- market focus ---
+      - key: PRIMARY_MARKET
+        value: FOREX
+
+      # --- risk (spec Part 44's example config, conservative defaults) ---
+      - key: RISK_PER_TRADE
+        value: "0.005"
+      - key: MAX_STAKE
+        value: "10.0"
+      - key: MAX_DAILY_LOSS
+        value: "20.0"
+      - key: MAX_DRAWDOWN
+        value: "0.15"
+      - key: MAX_CONSECUTIVE_LOSSES
+        value: "5"
+      - key: MAX_TRADES_PER_HOUR
+        value: "4"
+      - key: MAX_TRADES_PER_DAY
+        value: "20"
+      - key: MAX_OPEN_CONTRACTS
+        value: "3"
+
+      # --- edge requirements ---
+      - key: MIN_PROBABILITY_EDGE
+        value: "0.03"
+      - key: MIN_EXPECTED_VALUE
+        value: "0.0"
+      - key: MIN_PAYOUT
+        value: "0.0"
+
+      # --- data / execution quality ---
+      - key: MIN_DATA_QUALITY
+        value: "2"
+      - key: MAX_LATENCY_MS
+        value: "800"

@@ -1,0 +1,13 @@
+python-dotenv
+pydantic>=2
+pydantic-settings
+websockets
+fastapi
+uvicorn
+pandas
+numpy
+scikit-learn
+pytest
+structlog
+httpx
+pytest-asyncio
